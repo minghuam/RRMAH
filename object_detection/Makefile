@@ -1,12 +1,15 @@
 CC = g++
 CFLAGS = -std=c++0x
-INCLUDES = -I.
+INCLUDES = -I./ -I../util
 LFLAGS = $(shell pkg-config opencv --libs)$
 
-all: mask_sampler
+all: mask_sampler test
 
 mask_sampler: mask_sampler.cpp mask_generator.cpp
-	$(CC) $(CFLAGS) -o mask_sampler mask_sampler.cpp mask_generator.cpp $(LFLAGS) 
+	$(CC) $(CFLAGS) $(INCLUDES) -o mask_sampler mask_sampler.cpp mask_generator.cpp $(LFLAGS) 
+
+test: test.cpp obj_color_feature.cpp obj_global_feature.cpp obj_detector.cpp
+	$(CC) $(CFLAGS) $(INCLUDES) -o test test.cpp obj_color_feature.cpp obj_global_feature.cpp obj_detector.cpp $(LFLAGS)
 
 clean:
-	rm -f *.o *.~ mask_sampler
+	rm -f *.o *.~ mask_sampler test

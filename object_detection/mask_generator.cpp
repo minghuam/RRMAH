@@ -4,7 +4,7 @@
 MaskGenerator::MaskGenerator(){
     erosion_size = 3;
     dilation_size = 1;
-    max_learning_frames = 30;
+    max_learning_frames = 300;
     learning_frame = 0;
     skip_frame = 0;
     max_skipping_frames = 2;
