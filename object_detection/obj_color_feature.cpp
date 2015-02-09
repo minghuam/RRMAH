@@ -52,27 +52,4 @@ void ObjColorFeature::computeFeature(const cv::Mat &bgr, cv::Mat &feat){
 			sampleRow++;
 		}
 	}
-
-	/*
-	int sampleIndex = 0;
-	int maxOffset = patchSize/2;
-	for(int row = 0; row < I.rows; row++){
-		for(int col = 0; col < I.cols; col++){
-			int featIndex = 0;
-			for(int colOffset = -maxOffset; colOffset <= maxOffset; colOffset++){
-				for(int rowOffset = -maxOffset; rowOffset <= maxOffset; rowOffset++){
-					int prow = row + rowOffset;
-					int pcol = col + colOffset;
-					if(prow >= 0 && prow < I.rows && pcol >= 0 && pcol < I.cols){
-						feat.at<float>(sampleIndex, featIndex + 0) = I.at<cv::Vec3b>(prow,pcol)(0)/255.f;
-						feat.at<float>(sampleIndex, featIndex + 1) = I.at<cv::Vec3b>(prow,pcol)(1)/255.f;
-						feat.at<float>(sampleIndex, featIndex + 2) = I.at<cv::Vec3b>(prow,pcol)(2)/255.f;
-					}
-					featIndex += 3;
-				}
-			}
-			sampleIndex++;
-		}
-	}
-	*/
 }

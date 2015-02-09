@@ -4,28 +4,40 @@
 #include "obj_color_feature.h"
 #include "obj_global_feature.h"
 #include <opencv2/opencv.hpp>
+#include <atomic>
+#include <thread>
+#include <mutex>
 
 class ObjDetector{
 private:
 	CvRTParams rt_params;
 	
-	ObjColorFeature color_feature;
-	ObjGlobalFeature global_feature;
-
+	std::mutex g_mutex;
 	cv::Mat gdescriptor;
 	std::vector<CvRTrees*> random_trees;
-
 	cv::flann::Index *flannIndex;
+
+	std::vector<std::thread> threads;
+	std::atomic<int> th_counter;
+	bool is_model_ready;
+
+	void train(cv::Mat &Iraw, cv::Mat &Imsk);
+	void trainAsync(std::vector<std::string> &images, \
+		std::vector<std::string> &masks, int start, int end);
+
+	void reset();
 
 public:
 	ObjDetector();
 	~ObjDetector();
 
-	int load(const char *dir);
-	int save(const char *dir);
-	void train(cv::Mat &Iraw, cv::Mat &Imsk);
-	void trainBatch(std::vector<std::string> &imgDir, std::vector<std::string> &mskDir);
-	void predict(cv::Mat &Iraw, cv::Mat &Imsk);
+	int load(std::string dir);
+	int save(std::string dir);
+	int trainBatchAsync(std::vector<std::string> &images, \
+		std::vector<std::string> &masks, int nthreads);
+	bool isModelReady();
+	int predict(cv::Mat &Iraw, cv::Mat &Imsk, float prob_threshold, float minArea);
+
 };
 
 #endif /* OBJ_DETECTOR_H */

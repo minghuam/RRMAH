@@ -19,7 +19,7 @@
 *	@param file Input file path.
 *	@return File extension string.
 */
-const char* get_extension(const char *file){
+static const char* get_extension(const char *file){
 	int len = strlen(file);
 	if(len == 0){
 		return NULL;
@@ -48,7 +48,7 @@ const char* get_extension(const char *file){
 *	@param ext File extension filter.
 *	@return A list of files or sub-directories.
 */
-std::vector<std::string> list_dir(const char* dir, const char* ext = NULL){
+static std::vector<std::string> list_dir(const char* dir, const char* ext = NULL){
 	std::vector<std::string> files;
 	if(dir == NULL){
 		return files;
