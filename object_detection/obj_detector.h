@@ -22,7 +22,7 @@ private:
 	bool is_model_ready;
 
 	void train(cv::Mat &Iraw, cv::Mat &Imsk);
-	void trainAsync(std::vector<std::string> &images, \
+	int trainAsync(std::vector<std::string> &images, \
 		std::vector<std::string> &masks, int start, int end);
 
 	void reset();

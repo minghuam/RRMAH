@@ -1,6 +1,8 @@
+#include "stdafx.h"
 #include "obj_detector.h"
 #include "tinydir.hpp"
 #include <sstream>
+#include "dir_helper.h"
 
 ObjDetector::ObjDetector(){
 	rt_params.max_depth = 10;
@@ -13,6 +15,11 @@ ObjDetector::ObjDetector(){
 
 ObjDetector::~ObjDetector(){
 	reset();
+}
+
+
+bool ObjDetector::isModelReady(){
+	return is_model_ready;
 }
 
 void ObjDetector::reset(){
@@ -35,9 +42,10 @@ void ObjDetector::reset(){
 }
 
 int ObjDetector::load(std::string dir){
+	
 	reset();
 
-	std::vector<std::string> files = list_dir(dir.c_str(), ".gdescriptor");
+	std::vector<std::string> files = DirHelper::listFiles(dir, "gdescriptor");
 	if(files.size() != 1){
 		return -1;
 	}
@@ -48,9 +56,10 @@ int ObjDetector::load(std::string dir){
 	fs["gdescriptor"] >> gdescriptor;
 	fs.release();
 	flannIndex = new cv::flann::Index(gdescriptor, cv::flann::KMeansIndexParams());
+	
+	files = DirHelper::listFiles(dir, "classifier");
 
-	files = list_dir(dir.c_str(), ".classifier");
-	for(int i = 0; i < files.size(); i++){
+	for(int i = 0; i < (int)files.size(); i++){
 		std::cout << "loading: " << files[i] << std::endl;
 		CvRTrees *rt = new CvRTrees();
 		rt->load(files[i].c_str());
@@ -64,17 +73,20 @@ int ObjDetector::load(std::string dir){
 
 int ObjDetector::save(std::string dir){
 	cv::FileStorage fs;
-	std::string xml = dir + "/feat.gdescriptor";
+	
+	std::string xml = DirHelper::combinePath(dir, "feat.gdescriptor");
+
 	std::cout << "saving: " + xml << std::endl;
 	fs.open(xml, cv::FileStorage::WRITE);
 	fs << "gdescriptor" << gdescriptor;
 	fs.release();
 
 	char buf[64];
-	for(int i = 0; i < random_trees.size(); i++){
-		sprintf(buf, "%s/%04d.classifier", dir.c_str(), i);
-		std::cout << buf << std::endl;
-		random_trees[i]->save(buf);
+	for(int i = 0; i < (int)random_trees.size(); i++){
+		sprintf(buf, "%04d.classifier", i);
+		std::string path = DirHelper::combinePath(dir, std::string(buf));
+		std::cout << path << std::endl;
+		random_trees[i]->save(path.c_str());
 	}
 
 	return 0;
@@ -105,18 +117,20 @@ void ObjDetector::train(cv::Mat &Iraw, cv::Mat &Imsk){
 	random_trees.push_back(rt);
 }
 
-void ObjDetector::trainAsync(std::vector<std::string> &images, \
+int ObjDetector::trainAsync(std::vector<std::string> &images, \
 	std::vector<std::string> &masks, int start, int end){
 
 	ObjColorFeature color_feature;
 	ObjGlobalFeature global_feature;
 	cv::Mat feat, label, gfeat;
+	
+	std::string tempDir = "./temp";
 
-	std::stringstream ss;
-	ss << "start: " << start << ", end: " << end << "\n";
-	std::cout << ss.str();
+	if(DirHelper::safeMakeDirectory(tempDir)){
+		std::cerr << "failed to create temp directory" << std::endl;
+		return -1;
+	}
 
-	char tmp[64];
 	for(int i = start; i < end; i++){
 		cv::Mat Iraw = cv::imread(images[i]);
 		cv::Mat Imsk = cv::imread(masks[i]);
@@ -131,12 +145,12 @@ void ObjDetector::trainAsync(std::vector<std::string> &images, \
 		rt0->train(feat, CV_ROW_SAMPLE, label, \
 			cv::Mat(), cv::Mat(), varType, cv::Mat(), rt_params);
 
-		sprintf(tmp, "/tmp/random_forest.%d", i);
-		rt0->save(tmp);
+		std::string p = DirHelper::combinePath(tempDir, "random_forest." + std::to_string(i));
+		rt0->save(p.c_str());
 		delete rt0;
 
 		CvRTrees* rt = new CvRTrees();
-		rt->load(tmp);
+		rt->load(p.c_str());
 
 		g_mutex.lock();
 		gdescriptor.push_back(gfeat);
@@ -155,10 +169,8 @@ void ObjDetector::trainAsync(std::vector<std::string> &images, \
 		flannIndex = new cv::flann::Index(gdescriptor, cv::flann::KMeansIndexParams());
 		is_model_ready = true;
 	}
-}
 
-bool ObjDetector::isModelReady(){
-	return is_model_ready;
+	return 0;
 }
 
 int ObjDetector::trainBatchAsync(std::vector<std::string> &images, \
@@ -185,6 +197,8 @@ int ObjDetector::trainBatchAsync(std::vector<std::string> &images, \
 		threads.push_back(std::thread(\
 			&ObjDetector::trainAsync, this, images, masks, start, end));
 	}
+
+	return 0;
 }
 
 int ObjDetector::predict(cv::Mat &Iraw, cv::Mat &Imsk, float prob_threshold, float minArea){
@@ -202,7 +216,7 @@ int ObjDetector::predict(cv::Mat &Iraw, cv::Mat &Imsk, float prob_threshold, flo
 	global_feature.computeFeature(Iraw, gfeat);
 
 	// search for closest models
-	int k = 1;
+	int k = 2;
 	std::vector<int> indices;
 	std::vector<float> dists;
 	flannIndex->knnSearch(gfeat, indices, dists, k);
@@ -220,7 +234,7 @@ int ObjDetector::predict(cv::Mat &Iraw, cv::Mat &Imsk, float prob_threshold, flo
 			float val = 0.0f;
 			float weight = 1.0f;
 			float totalWeights = 0.0f;
-			for(int i = 0; i < indices.size(); i++){
+			for(int i = 0; i < (int)indices.size(); i++){
 				val += weight * random_trees[indices[i]]->predict(feat.row(sampleIndex));
 				totalWeights += weight;
 				weight *= 0.9f;
@@ -229,6 +243,11 @@ int ObjDetector::predict(cv::Mat &Iraw, cv::Mat &Imsk, float prob_threshold, flo
 			sampleIndex++;
 		}
 	}
+	std::cout << "model: ";
+	for(int i = 0; i < (int)indices.size(); i++){
+		std::cout << indices[i] + 1 << " ";
+	}
+	std::cout << std::endl;
 
 	cv::GaussianBlur(Imsk, Imsk, cv::Size(13, 13), 0, 0, cv::BORDER_REFLECT);
 	

@@ -4,16 +4,19 @@
 #include "tinydir.hpp"
 #include "obj_detector.h"
 #include "obj_tracker.h"
+#include "kinect2.h"
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+
+#define NUM_OBJS 3
 
 std::mutex g_mutex;
 std::condition_variable g_cv;
 int g_count = 3;
 
 void predictAsync(ObjDetector *obj, cv::Mat *Iraw, cv::Mat *Imsk){
-	obj->predict(*Iraw, *Imsk, 0.2, 100);
+	obj->predict(*Iraw, *Imsk, 0.2f, 100);
 	std::unique_lock<std::mutex> lck(g_mutex);
 	g_count--;
 	g_cv.notify_all();
@@ -21,135 +24,178 @@ void predictAsync(ObjDetector *obj, cv::Mat *Iraw, cv::Mat *Imsk){
 
 int main(int argc, char **argv){
 
+	cv::setUseOptimized( true );
+
 	ObjColorFeature objFeature;
-	ObjDetector objDetector1;
-	ObjDetector objDetector2;
-	ObjDetector objDetector3;
-
-	const char *trainImgDir1 = "./obj1/train/image";
-	const char *trainMskDir1 = "./obj1/train/mask";
-	const char *trainImgDir2 = "./obj2/train/image";
-	const char *trainMskDir2 = "./obj2/train/mask";
-	const char *trainImgDir3 = "./hand/train/image";
-	const char *trainMskDir3 = "./hand/train/mask";
-
-	std::vector<std::string> trainImgs1 = list_dir(trainImgDir1, ".jpg");
-	std::vector<std::string> trainMsks1 = list_dir(trainMskDir1, ".jpg");
-	assert(trainImgs1.size() == trainMsks1.size());
-
-	std::vector<std::string> trainImgs2 = list_dir(trainImgDir2, ".jpg");
-	std::vector<std::string> trainMsks2 = list_dir(trainMskDir2, ".jpg");
-	assert(trainImgs2.size() == trainMsks2.size());
-
-	std::vector<std::string> trainImgs3 = list_dir(trainImgDir3, ".jpg");
-	std::vector<std::string> trainMsks3 = list_dir(trainMskDir3, ".jpg");
-	assert(trainImgs3.size() == trainMsks3.size());
-
-	#if 0
-	objDetector1.trainBatchAsync(trainImgs1, trainMsks1, 8);
-	while(!objDetector1.isModelReady()){
-		std::cout << "waiting...\n";
-		sleep(1);
+	std::vector<ObjDetector*> objDetectors;
+	for(int i = 0; i < NUM_OBJS; i++){
+		objDetectors.push_back(new ObjDetector());
 	}
-	//objDetector1.save("./obj1/model");
 
-	objDetector2.trainBatchAsync(trainImgs2, trainMsks2, 8);
-	while(!objDetector2.isModelReady()){
-		std::cout << "waiting...\n";
-		sleep(1);
-	}
-	//objDetector2.save("./obj2/model");
 
-	objDetector3.trainBatchAsync(trainImgs3, trainMsks3, 8);
-	while(!objDetector3.isModelReady()){
-		std::cout << "waiting...\n";
-		sleep(1);
-	}
-	//objDetector3.save("./hand/model");
-	#endif
-	
-	#if 1
-	objDetector1.load("./obj1/model");
-	objDetector2.load("./obj2/model");
-	objDetector3.load("./hand/model");
-	#endif
+	std::vector<std::string> folders;
+	folders.push_back(".\\hand3");
+	folders.push_back(".\\obj10");
+	folders.push_back(".\\obj11");
 
-	cv::VideoCapture cap(0);
-	if(!cap.isOpened()){
-		std::cout << "Failed to open camera!" << std::endl;
-		return -1;
+	std::vector<std::string> trainImgDirs;
+	std::vector<std::string> trainMskDirs;
+	trainImgDirs.push_back(".\\hand3\\train\\image\\");
+	trainMskDirs.push_back(".\\hand3\\train\\mask\\");
+	trainImgDirs.push_back(".\\obj10\\train\\image\\");
+	trainMskDirs.push_back(".\\obj10\\train\\mask\\");
+	trainImgDirs.push_back(".\\obj11\\train\\image\\");
+	trainMskDirs.push_back(".\\obj11\\train\\mask\\");
+
+#if 0
+	// train
+	std::cout << "training..." << std::endl;
+	for(int i = 0; i < NUM_OBJS; i++){
+		std::string imgDir = folders[i] + "\\train\\image\\";
+		std::string mskDir = folders[i] + "\\train\\mask\\";
+		std::vector<std::string> trainImgs = list_dir(imgDir.c_str(), "*.jpg");
+		std::vector<std::string> trainMsks = list_dir(mskDir.c_str(), "*.jpg");
+		assert(trainImgs.size() == trainMsks.size());
+		objDetectors[i]->trainBatchAsync(trainImgs, trainMsks, 4);
+		while(!objDetectors[i]->isModelReady()){
+			std::cout << ".";
+			Sleep(1000);
+		}
+		std::string modelDir = folders[i] + "\\model\\";
+		objDetectors[i]->save(modelDir);
 	}
+#endif
+
+	// load
+	for(int i = 0; i < NUM_OBJS; i++){
+		std::string modelDir = folders[i] + "\\model\\";
+		objDetectors[i]->load(modelDir.c_str());
+	}
+
 	cv::Mat rawImg;
-	cv::Mat testMsk1;
-	cv::Mat testMsk2;
-	cv::Mat testMsk3;
-	
-	std::thread thr1;
-	std::thread thr2;
-	std::thread thr3;
+	cv::Mat roiImg;
+	cv::Mat depthImg;
+	std::vector<ObjTracker*> trackers;
+	std::vector<cv::Mat> mskImgs;
+	std::vector<std::thread> thrs;
 
-	ObjTracker tracker1;
-	ObjTracker tracker2;
-	tracker2.numObjs = 2;
-	ObjTracker tracker3;
-	tracker3.numObjs = 2;
-	tracker3.minArea = 500;
+	for(int i = 0; i < NUM_OBJS; i++){
+		trackers.push_back(new ObjTracker());
+		mskImgs.push_back(cv::Mat());
+		thrs.push_back(std::thread());
+	}
+	trackers[0]->numObjs = 2;
+	trackers[0]->minArea = 500;
+	trackers[1]->numObjs = 2;
+	trackers[2]->numObjs = 2;
+
+	Kinect2 kinect;
+	if(kinect.open()){
+		std::cout << "Failed to open kinect." << std::endl;
+	}
+
+	int imgWidth = 384;
+	int imgHeight = 216;
+
+	cv::Rect imageROI;
+	cv::FileStorage fs;
+	fs.open("roi.xml", cv::FileStorage::READ);
+	fs["roi"] >> imageROI;
+	fs.release();
+	if(imageROI.width == 0){
+		imageROI = cv::Rect(0, 0, imgWidth, imgHeight);
+	}
 
 	while(1){
-		if(!cap.read(rawImg)){
-			std::cout << "Camera error!" << std::endl;
-			break;
-		}
+		// query latest frame
+		kinect.update();
 		
-		cv::resize(rawImg, rawImg, cv::Size(320, 240));
-		
-		double start = cv::getTickCount();
-
-		thr1 = std::thread(predictAsync, &objDetector1, &rawImg, &testMsk1);
-		thr2 = std::thread(predictAsync, &objDetector2, &rawImg, &testMsk2);
-		thr3 = std::thread(predictAsync, &objDetector3, &rawImg, &testMsk3);
-
-		std::unique_lock<std::mutex> lck(g_mutex);
-		while(g_count){
-			g_cv.wait(lck);
-		}
-		thr1.join();
-		thr2.join();
-		thr3.join();
-		g_count = 3;
-
-		tracker1.track(testMsk1);
-		tracker2.track(testMsk2);
-		tracker3.track(testMsk3);
-
-		for(int i = 0; i < tracker1.objects.size(); i++){
-			Object obj = tracker1.objects[i];
-			cv::rectangle(rawImg, obj.bbox, cv::Scalar(0, 0, 255));
+		// depth image
+		if(kinect.getIsDepthFrameNew()){
 		}
 
-		for(int i = 0; i < tracker2.objects.size(); i++){
-			Object obj = tracker2.objects[i];
-			cv::rectangle(rawImg, obj.bbox, cv::Scalar(0, 255, 0));
-		}
+		// color image
+		if(kinect.getIsColorFrameNew()){
+			rawImg = cv::Mat(kinect.imageHeight, kinect.imageWidth, CV_8UC4, kinect.getImageData());
 
-		for(int i = 0; i < tracker3.objects.size(); i++){
-			Object obj = tracker3.objects[i];
-			cv::rectangle(rawImg, obj.bbox, cv::Scalar(0, 255, 255));
+			roiImg = rawImg(imageROI);
+			cv::resize(roiImg, roiImg, cv::Size(roiImg.cols/2, roiImg.rows/2));
+			cv::rectangle(rawImg, imageROI, cv::Scalar(0, 0, 255));
+			
+			g_count = 3;
+			int64 start = cv::getTickCount();
+			for(int i = 0; i < NUM_OBJS; i++){
+				thrs[i] = std::thread(predictAsync, objDetectors[i], &roiImg, &mskImgs[i]);
+			}
+
+			std::unique_lock<std::mutex> lck(g_mutex);
+			while(g_count){
+				g_cv.wait(lck);
+			}
+
+			for(int i = 0; i < NUM_OBJS; i++){
+				thrs[i].join();
+			}
+			
+			for(int i = 0; i < NUM_OBJS; i++){
+				trackers[i]->track(mskImgs[i]);
+			}
+
+			std::vector<cv::Scalar> colors;
+			colors.push_back(cv::Scalar(0,0,255));
+			colors.push_back(cv::Scalar(0,255,0));
+			colors.push_back(cv::Scalar(255,0,0));
+			for(int i = 0; i < NUM_OBJS; i++){
+				for(int j = 0; j < (int)trackers[i]->objects.size(); j++){
+					Object obj = trackers[i]->objects[j];
+					cv::rectangle(roiImg, obj.bbox, colors[i]);
+					char text[32];
+					sprintf(text, "id=%d", obj.id);
+					cv::putText(roiImg, text, obj.centroid, CV_FONT_HERSHEY_PLAIN, 1.0, colors[i]);
+				}
+			}
+			double seconds = (cv::getTickCount() - start)/cv::getTickFrequency();
+			
+			LOGF("test time: %f ms.", seconds * 1000);
+			for(int i = 0; i < NUM_OBJS; i++){
+				char buf[32];
+				sprintf(buf, "mask %d", i + 1);
+				cv::imshow(buf, mskImgs[i]);
+			}
+
+			// body frame
+			if(kinect.getIsBodyFrameNew()){
+				ICoordinateMapper *mapper = kinect.getCoordinateMapper();
+				Joint *joints = kinect.getJoints();
+				// head
+				ColorSpacePoint colorPt;
+				mapper->MapCameraPointToColorSpace(joints[JointType_Head].Position, &colorPt);
+				cv::circle(rawImg, cv::Point((int)colorPt.X, (int)colorPt.Y), 5, cv::Scalar(0, 255, 0), -1);
+				// left shoulder
+				mapper->MapCameraPointToColorSpace(joints[JointType_ShoulderLeft].Position, &colorPt);
+				cv::circle(rawImg, cv::Point((int)colorPt.X, (int)colorPt.Y), 5, cv::Scalar(0, 255, 0), -1);
+				// right shoulder
+				mapper->MapCameraPointToColorSpace(joints[JointType_ShoulderRight].Position, &colorPt);
+				cv::circle(rawImg, cv::Point((int)colorPt.X, (int)colorPt.Y), 5, cv::Scalar(0, 255, 0), -1);
+				// sholder spin
+				mapper->MapCameraPointToColorSpace(joints[JointType_SpineShoulder].Position, &colorPt);
+				cv::circle(rawImg, cv::Point((int)colorPt.X, (int)colorPt.Y), 5, cv::Scalar(0, 255, 0), -1);
+			}
+			
+			cv::resize(rawImg, rawImg, cv::Size(kinect.imageWidth/2, kinect.imageHeight/2));
+			cv::imshow("raw", rawImg);
+			cv::imshow("roi", roiImg);
 		}
-		
-		double seconds = (cv::getTickCount() - start)/cv::getTickFrequency();
-		LOGF("test time: %f sec.", seconds);
-#if 1
-		cv::imshow("msk1", testMsk1);
-		cv::imshow("msk2", testMsk2);
-		cv::imshow("msk3", testMsk3);
-#endif		
-		cv::imshow("raw", rawImg);
 
 		int key = cv::waitKey(30) & 0xFF;
 		if(key == 27){
 			break;
 		}
+	}
+
+	for(int i = 0; i < NUM_OBJS; i++){
+		delete objDetectors[i];
+		delete trackers[i];
 	}
 
 	return 0;

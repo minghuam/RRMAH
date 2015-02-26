@@ -1,13 +1,14 @@
+#include "stdafx.h"
 #include "mask_generator.h"
 #include <iostream>
 
 MaskGenerator::MaskGenerator(){
-    erosion_size = 3;
+    erosion_size = 5;
     dilation_size = 1;
     max_learning_frames = 300;
     learning_frame = 0;
     skip_frame = 0;
-    max_skipping_frames = 2;
+    max_skipping_frames = 1;
 }
 
 void MaskGenerator::restart(){

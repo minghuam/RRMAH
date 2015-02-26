@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "obj_global_feature.h"
 #include <cassert>
 
@@ -26,7 +27,7 @@ void ObjGlobalFeature::computeFeature(const cv::Mat &bgr, cv::Mat &feat){
     }
 	
     // ==== Remove small values ==== //
-    float minProb = 0.01;
+    float minProb = 0.01f;
     minProb *= hsv.rows*hsv.cols;
     cv::Mat plane;
     const cv::Mat *_his = &his;

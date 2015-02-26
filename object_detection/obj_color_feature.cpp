@@ -1,7 +1,7 @@
+#include "stdafx.h"
 #include "obj_color_feature.h"
 #include <cassert>
 #include <iostream>
-#include "tinylog.hpp"
 
 ObjColorFeature::ObjColorFeature(){
 	patchSize = 3;
