@@ -38,19 +38,21 @@ void onMouse(int mouseEvent, int x, int y, int flags, void *param){
 
 int main(int argc, char **argv){
 
-	if(argc < 3){
-		std::cout << "usage : " << argv[0] << " img_dir mask_dir" << std::endl;
+	if(argc < 4){
+		std::cout << "usage : " << argv[0] << " img_dir mask_dir depth_dir" << std::endl;
 		return 0;
 	}
 
 	std::string imgDir = argv[1];
 	std::string mskDir = argv[2];
+	std::string depthDir = argv[3];
 	
 	MaskGenerator mg;
 
 	cv::Mat rawImg;
 	cv::Mat roiImg;
 	cv::Mat mskImg;
+	cv::Mat depthImg;
 
 	Kinect2 kinect;
 	if(kinect.open()){
@@ -78,7 +80,6 @@ int main(int argc, char **argv){
 	}
 
 	while(1){ 
-
 		kinect.update();
 		if(kinect.getIsColorFrameNew()){
 			rawImg = cv::Mat(kinect.imageHeight, kinect.imageWidth, CV_8UC4, kinect.getImageData());
@@ -96,6 +97,9 @@ int main(int argc, char **argv){
 				mg.update(roiImg, mskImg);
 				cv::imshow("mask", mskImg);
 			}
+		}
+		if(kinect.getIsDepthFrameNew()){
+			
 		}
 
 		int key = cv::waitKey(30) & 0xFF;

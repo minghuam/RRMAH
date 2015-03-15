@@ -23,6 +23,8 @@ Kinect2::Kinect2(void) : imageWidth(1920), imageHeight(1080),
 	isColorFrameNew = false;
 	isDepthFrameNew = false;
 	isBodyFrameNew = false;
+	cameraSpacePoints = new CameraSpacePoint[imageWidth * imageHeight];
+	depthSpacePoints = new DepthSpacePoint[imageWidth * imageHeight];
 }
 
 Kinect2::~Kinect2(void)
@@ -35,6 +37,16 @@ Kinect2::~Kinect2(void)
 	if(depthData){
 		delete [] depthData;
 		depthData = NULL;
+	}
+
+	if(cameraSpacePoints){
+		delete [] cameraSpacePoints;
+		cameraSpacePoints = NULL;
+	}
+
+	if(depthSpacePoints){
+		delete [] depthSpacePoints;
+		depthSpacePoints = NULL;
 	}
 
 	if(kinectSensor){
@@ -143,8 +155,13 @@ void Kinect2::update(){
 		if(SUCCEEDED(hr)){
 			//UINT capacity = depthWidth * depthHeight * sizeof(UINT16);
 			//depthFrame->AccessUnderlyingBuffer(&capacity, &depthData);
-			depthFrame->CopyFrameDataToArray(depthWidth * depthHeight * 2, depthData);
+			depthFrame->CopyFrameDataToArray(depthWidth * depthHeight, depthData);
 			isDepthFrameNew = true;
+			// map color points to camera space
+			if(coordinateMapper != NULL){
+				coordinateMapper->MapColorFrameToCameraSpace(depthWidth * depthHeight, depthData, imageWidth * imageHeight, cameraSpacePoints);
+				coordinateMapper->MapColorFrameToDepthSpace(depthWidth * depthHeight, depthData, imageWidth * imageHeight, depthSpacePoints);
+			}
 		}
 		SafeRelease(depthFrame);
 	}
@@ -162,7 +179,6 @@ void Kinect2::update(){
 					BOOLEAN tracked = false;
 					hr = pBody[i]->get_IsTracked(&tracked);
 					if(SUCCEEDED(hr) && tracked){
-						std::cout << i << std::endl;
 						pBody[i]->GetJoints(JointType::JointType_Count, joints);
 						isBodyFrameNew = true;
 						break;
@@ -184,4 +200,12 @@ bool Kinect2::getIsDepthFrameNew(){
 
 bool Kinect2::getIsBodyFrameNew(){
 	return isBodyFrameNew;
+}
+
+CameraSpacePoint Kinect2::colorPointToCameraPoint(int colorX, int colorY){
+	return cameraSpacePoints[colorY * imageWidth + colorX];
+}
+
+DepthSpacePoint Kinect2::colorPointToDepthPoint(int colorX, int colorY){
+	return depthSpacePoints[colorY * imageWidth + colorX];
 }

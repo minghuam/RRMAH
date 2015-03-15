@@ -7,7 +7,6 @@
 #include <Windows.h>
 #include <Kinect.h>
 
-
 class Kinect2
 {
 private:
@@ -18,6 +17,8 @@ private:
 	IDepthFrameReader *depthFrameReader;
 	IBodyFrameReader *bodyFrameReader;
 	ICoordinateMapper *coordinateMapper;
+	CameraSpacePoint *cameraSpacePoints;
+	DepthSpacePoint *depthSpacePoints;
 	
 	bool isColorFrameNew;
 	bool isDepthFrameNew;
@@ -46,5 +47,7 @@ public:
 	Joint *getJoints();
 	ICoordinateMapper *getCoordinateMapper();
 
+	CameraSpacePoint colorPointToCameraPoint(int colorX, int colorY);
+	DepthSpacePoint colorPointToDepthPoint(int colorX, int colorY);
 };
 

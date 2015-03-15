@@ -1,0 +1,161 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="DebugBin|Win32">
+      <Configuration>DebugBin</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseBin|Win32">
+      <Configuration>ReleaseBin</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{02CFD22A-385B-4681-80E7-079F4BFE7261}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>Aruco</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugBin|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='ReleaseBin|Win32'">
+    <PlatformToolset>v110</PlatformToolset>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugBin|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\..\..\opencv\inc;$(ProjectDir)\..\..\..\aruco\inc</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(ProjectDir)\..\..\..\opencv\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencv_core2410d.lib;opencv_highgui2410d.lib;opencv_imgproc2410d.lib;opencv_ml2410d.lib;opencv_flann2410d.lib;opencv_video2410d.lib;opencv_calib3d2410d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Lib>
+      <OutputFile>$(OutDir)$(TargetName)d$(TargetExt)</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugBin|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\..\..\opencv\inc;$(ProjectDir)\..\..\..\aruco\inc</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(ProjectDir)\..\..\..\opencv\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencv_core2410d.lib;opencv_highgui2410d.lib;opencv_imgproc2410d.lib;opencv_ml2410d.lib;opencv_flann2410d.lib;opencv_video2410d.lib;opencv_calib3d2410d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)d$(TargetExt)</OutputFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\..\..\opencv\inc;$(ProjectDir)\..\..\..\aruco\inc</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseBin|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\..\..\opencv\inc;$(ProjectDir)\..\..\..\aruco\inc</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(ProjectDir)\..\..\..\opencv\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencv_core2410.lib;opencv_highgui2410.lib;opencv_imgproc2410.lib;opencv_ml2410.lib;opencv_flann2410.lib;opencv_video2410.lib;opencv_calib3d2410.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\aruco\src\arucofidmarkers.cpp" />
+    <ClCompile Include="..\..\..\aruco\src\ar_omp.cpp" />
+    <ClCompile Include="..\..\..\aruco\src\board.cpp" />
+    <ClCompile Include="..\..\..\aruco\src\boarddetector.cpp" />
+    <ClCompile Include="..\..\..\aruco\src\cameraparameters.cpp" />
+    <ClCompile Include="..\..\..\aruco\src\chromaticmask.cpp" />
+    <ClCompile Include="..\..\..\aruco\src\cvdrawingutils.cpp" />
+    <ClCompile Include="..\..\..\aruco\src\highlyreliablemarkers.cpp" />
+    <ClCompile Include="..\..\..\aruco\src\marker.cpp" />
+    <ClCompile Include="..\..\..\aruco\src\markerdetector.cpp" />
+    <ClCompile Include="..\..\..\aruco\src\subpixelcorner.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\aruco\inc\aruco.h" />
+    <ClInclude Include="..\..\..\aruco\inc\arucofidmarkers.h" />
+    <ClInclude Include="..\..\..\aruco\inc\ar_omp.h" />
+    <ClInclude Include="..\..\..\aruco\inc\board.h" />
+    <ClInclude Include="..\..\..\aruco\inc\boarddetector.h" />
+    <ClInclude Include="..\..\..\aruco\inc\cameraparameters.h" />
+    <ClInclude Include="..\..\..\aruco\inc\chromaticmask.h" />
+    <ClInclude Include="..\..\..\aruco\inc\cvdrawingutils.h" />
+    <ClInclude Include="..\..\..\aruco\inc\exports.h" />
+    <ClInclude Include="..\..\..\aruco\inc\highlyreliablemarkers.h" />
+    <ClInclude Include="..\..\..\aruco\inc\marker.h" />
+    <ClInclude Include="..\..\..\aruco\inc\markerdetector.h" />
+    <ClInclude Include="..\..\..\aruco\inc\subpixelcorner.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

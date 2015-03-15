@@ -23,14 +23,17 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	if(!DirHelper::exists(imageFolder)){
 		std::cout << imageFolder << " does not exists!" << std::endl;
+		return -1;
 	}
 
 	if(!DirHelper::exists(maskFolder)){
 		std::cout << maskFolder << " does not exists!" << std::endl;
+		return -1;
 	}
 
 	if(!DirHelper::exists(modelFolder)){
 		std::cout << modelFolder << " does not exists!" << std::endl;
+		return -1;
 	}
 
 	cv::setUseOptimized( true );
