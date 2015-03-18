@@ -60,8 +60,13 @@ private:
 	unsigned int nextObjId;
 
 public:
+	// minimum probability threshold for blobs(0 - 1.0f)
 	float minProb;
+	// minimum blob area size(in pixels)
 	float minArea;
+	// maximum displacement in camera space(mm)
+	float maxDisplacement;
+
 	int numObjs;
 
 	// simple low-pass filter

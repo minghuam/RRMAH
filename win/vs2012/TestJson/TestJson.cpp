@@ -17,10 +17,10 @@
 #include <random>
 #include <thread>
 
-using namespace Poco::JSON;
+//using namespace Poco::JSON;
 
-Object::Ptr createRandomObject(int id, std::string type){
-	Object::Ptr obj = new Object();
+Poco::JSON::Object::Ptr createRandomObject(int id, std::string type){
+	Poco::JSON::Object::Ptr obj = new Poco::JSON::Object();
 	obj->set("id", id);
 	obj->set("type", type);
 	obj->set("x", rand() % 100 / 100.0);
@@ -30,10 +30,9 @@ Object::Ptr createRandomObject(int id, std::string type){
 }
 
 std::string constructEvent(){
+	Poco::JSON::Object::Ptr evt = new Poco::JSON::Object();
+	Poco::JSON::Array::Ptr arr = new Poco::JSON::Array();
 
-	Object::Ptr evt = new Object();
-
-	Array::Ptr arr = new Array();
 	static int id = 1;
 	for(int i = 0; i < 2; i++){
 		arr->set(i, createRandomObject(id++, "hand"));
@@ -106,7 +105,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	// bind and listen
 	Poco::Net::ServerSocket server(port);
-	Parser parser;
+	Poco::JSON::Parser parser;
 
 	while(1){
 		Poco::Net::StreamSocket socket = server.acceptConnection();
@@ -144,16 +143,27 @@ int _tmain(int argc, _TCHAR* argv[])
 				std::string s(buf);
 				std::cout << "recv: " << nbytes << " bytes." << std::endl;
 				std::cout << s << std::endl;
-			
+
 				parser.reset();
 				try{
 					parser.parse(s);
 					Poco::Dynamic::Var ret = parser.result();
-					Object::Ptr obj = ret.extract<Object::Ptr>();
-					std::string msg_type = obj->getValue<std::string>("type");
+					Poco::JSON::Object::Ptr obj = ret.extract<Poco::JSON::Object::Ptr>();
+					std::string cmd = obj->getValue<std::string>("type");
+
+					if(cmd == "startTask"){ }
+
+					Poco::JSON::Object::Ptr jsonObj = new Poco::JSON::Object();
+					jsonObj->set("ack", "ok");
+					std::stringstream os;
+					Poco::JSON::Stringifier::stringify(jsonObj, os);
+					std::string s = os.str();
+					socket.sendBytes(s.c_str(), s.length());
+
+					/*
 					if(msg_type == "event"){
 						std::cout << "testID: " << obj->getValue<int>("testID") << std::endl;
-						Array::Ptr arr = obj->getArray("objects");
+						Poco::JSON::Array::Ptr arr = obj->getArray("objects");
 						for(int i = 0; i < arr->size(); i++){
 							obj = arr->getObject(i);
 							std::cout << "####################" << std::endl;
@@ -168,6 +178,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						std::cout << "enableEvent: " << enable << std::endl;
 						isStreaming = enable;
 					}
+					*/
 				}catch(Poco::Exception &e){
 					std::cout << e.displayText() << std::endl;
 				}

@@ -58,6 +58,7 @@ ObjTracker::ObjTracker(){
 	numObjs = 1;
 	nextObjId = 0;
 	alpha = 0.3f;
+	maxDisplacement = 200.0f;	
 }
 
 ObjTracker::ObjTracker(float minProb, float minArea, int numObjs):
@@ -195,11 +196,18 @@ void ObjTracker::track(cv::Mat &Imsk, cv::Rect roi, Kinect2 &kinect, cv::Size ma
 			}
 		}
 
-		// assign id, clculate displacement and velocity
+		// assign id, calculate displacement and velocity
 		while(pairs.size()){
 			DistancePair p = pairs.top();
 			pairs.pop();
 			if(p.newObj->id == -1 && p.oldObj->id != -1){
+
+				// if displacement is to large, assign new id
+				cv::Point3f deltaPos = 1000.0f * (p.newObj->position - p.oldObj->position);
+				float absDisplacement = sqrt(deltaPos.x * deltaPos.x + deltaPos.y * deltaPos.y + deltaPos.z * deltaPos.z);
+				if(absDisplacement > maxDisplacement){
+					continue;
+				}
 
 				// simple low-pass filter
 				p.newObj->position.x = p.newObj->position.x * alpha + (1.0f - alpha) * p.oldObj->position.x;
@@ -208,7 +216,7 @@ void ObjTracker::track(cv::Mat &Imsk, cv::Rect roi, Kinect2 &kinect, cv::Size ma
 
 				p.newObj->id = p.oldObj->id;
 				p.oldObj->id = -1;
-				p.newObj->displacement = 1000.0f * (p.newObj->position - p.oldObj->position);
+				p.newObj->displacement = deltaPos;
 				float time = p.newObj->timestamp - p.oldObj->timestamp;
 				if(time > 0.0f){
 					p.newObj->velocity.x = p.newObj->displacement.x/time;

@@ -56,7 +56,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	std::vector<std::thread> thrs;
 	for(int i = 0; i < numObjs; i++){
 		ObjTracker *tr = new ObjTracker();
-		tr->numObjs = 2;
+		tr->numObjs = 1;
 		trackers.push_back(tr);
 		mskImgs.push_back(cv::Mat());
 		thrs.push_back(std::thread());
