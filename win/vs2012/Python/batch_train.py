@@ -4,6 +4,7 @@ import sys
 import os
 import shutil
 import subprocess
+import uuid
 
 def mkdir_safe(dir_name):
 	dst = os.path.abspath(dir_name)
@@ -74,13 +75,16 @@ if __name__ == '__main__':
 	# copy new images/masks
 	print 'Copy new files...'
 	dst_path = os.path.abspath(dir_name)
-	# remove old files
-	shutil.rmtree(dst_path)
+	imgs = [os.path.join(sampler_img_dir, f) for f in os.listdir(sampler_img_dir)]
+	msks = [os.path.join(sampler_msk_dir, f) for f in os.listdir(sampler_msk_dir)]
+
 	# copy new files
-	mkdir_safe_empty(dst_path)
+	for i in range(len(imgs)):
+		name = str(uuid.uuid1()) + ".jpg"
+		shutil.copy(imgs[i], os.path.join(dst_path, 'image', 'img_' + name))
+		shutil.copy(msks[i], os.path.join(dst_path, 'mask', 'msk_' + name))
+
 	mkdir_safe_empty(os.path.join(dst_path, 'model'))
-	shutil.copytree(sampler_img_dir, os.path.join(dst_path, 'image'))
-	shutil.copytree(sampler_msk_dir, os.path.join(dst_path, 'mask'))
 
 	# call training 
 	print 'Start training...'
