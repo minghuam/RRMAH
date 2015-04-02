@@ -250,6 +250,7 @@ int ObjDetector::predict(cv::Mat &Iraw, cv::Mat &Imsk, float prob_threshold, flo
 	std::cout << std::endl;
 
 	cv::GaussianBlur(Imsk, Imsk, cv::Size(13, 13), 0, 0, cv::BORDER_REFLECT);
+
 	
 	#if 0
 	// probability threshold

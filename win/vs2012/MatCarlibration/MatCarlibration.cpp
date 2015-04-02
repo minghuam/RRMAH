@@ -14,7 +14,6 @@
 const int imgWidth = 1920;
 const int imgHeight = 1080;
 cv::Point mouseDownPt;
-cv::Rect imageROI;
 Kinect2 kinect;
 Matt mat;
 
@@ -125,7 +124,7 @@ void onMouse(int mouseEvent, int x, int y, int flags, void *param){
 				top = min(mat.corners[i].y, top);
 				bottom = max(mat.corners[i].y, bottom);
 			}
-			imageROI = cv::Rect(left, top, right - left, bottom - top);
+			mat.imageROI = cv::Rect(left, top, right - left, bottom - top);
 			mat.cam2Matt = estimateCam2Matt(mat.corners, kinect);
 			mat.matt2Color = estimateMatt2Color(mat.corners);
 			mat.color2Matt = estimateColor2Matt(mat.corners);
@@ -152,25 +151,72 @@ void onMouse(int mouseEvent, int x, int y, int flags, void *param){
 	}
 }
 
+class ObjXCompare{
+public:
+	bool operator()(const Object &obj1, const Object &obj2){
+		return obj1.centroid.x < obj2.centroid.x;
+	}
+};
+
+class ObjYCompare{
+public:
+	bool operator()(const Object &obj1, const Object &obj2){
+		return obj1.centroid.y < obj2.centroid.y;
+	}
+};
+
+void getBoxBases(ObjTracker &boxTracker, Matt &mat){
+	if(boxTracker.objects.size() == 6){
+		// get left 3 objs and right 3 objs
+		sort(boxTracker.objects.begin(), boxTracker.objects.end(), ObjXCompare());
+		std::vector<Object> left_objs(boxTracker.objects.begin(), boxTracker.objects.begin() + 3);
+		std::vector<Object> right_objs(boxTracker.objects.begin() + 3, boxTracker.objects.end());
+		sort(left_objs.begin(), left_objs.end(), ObjYCompare());
+		sort(right_objs.begin(), right_objs.end(), ObjYCompare());
+
+		// get upper 2 objs and lower 2 objs
+		sort(boxTracker.objects.begin(), boxTracker.objects.end(), ObjYCompare());
+		std::vector<Object> up_objs(boxTracker.objects.begin(), boxTracker.objects.begin() + 2);
+		std::vector<Object> low_objs(boxTracker.objects.begin() + 4, boxTracker.objects.end());
+		sort(up_objs.begin(), up_objs.end(), ObjXCompare());
+		sort(low_objs.begin(), low_objs.end(), ObjXCompare());
+	
+		if(left_objs[0].id == up_objs[0].id && right_objs[0].id == up_objs[1].id && \
+			left_objs[2].id == low_objs[0].id && right_objs[2].id == low_objs[1].id){
+				mat.boxBases[0] = left_objs[0].centroid;
+				mat.boxBases[1] = left_objs[1].centroid;
+				mat.boxBases[2] = left_objs[2].centroid;
+				mat.boxBases[3] = right_objs[0].centroid;
+				mat.boxBases[4] = right_objs[1].centroid;
+				mat.boxBases[5] = right_objs[2].centroid;
+		}
+	}
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	cv::setUseOptimized( true );
 
+	if(argc < 2){
+		std::cout << "invalid arguments: dataDir" << std::endl;
+		return -1;
+	}
+
+	// load detector for box
+	ObjDetector boxDetector;
+	std::string modelDir = DirHelper::combinePath(argv[1], "model");
+	if(boxDetector.load(modelDir)){
+		std::cerr << "failed to load " + modelDir << std::endl;
+		return -1;
+	}
+	ObjTracker boxTracker(0.4f, 100, 6);
+
 	cv::Mat rawImg;
 	cv::Mat roiImg;
+	cv::Mat roiMsk;
+	cv::Mat boxImg;
+	cv::Mat boxMsk;
 	cv::Mat depthImg;
-	
-	// load ROI
-	int imgWidth = 384;
-	int imgHeight = 216;
-	cv::FileStorage fs;
-	if(fs.open("roi.xml", cv::FileStorage::READ)){
-		fs["roi"] >> imageROI;
-		fs.release();
-	}
-	if(imageROI.width == 0){
-		imageROI = cv::Rect(0, 0, imgWidth, imgHeight);
-	}
 
 	// load mat configuration
 	mat.load("matt.xml");
@@ -203,12 +249,35 @@ int _tmain(int argc, _TCHAR* argv[])
 		if(kinect.getIsColorFrameNew()){
 			rawImg = cv::Mat(kinect.imageHeight, kinect.imageWidth, CV_8UC4, kinect.getImageData());
 			cv::cvtColor(rawImg, rawImg, CV_BGRA2BGR);
-
-			roiImg = rawImg(imageROI);
+			
+			roiImg = rawImg(mat.imageROI);
+			// resize to 1/2
 			cv::resize(roiImg, roiImg, cv::Size(roiImg.cols/2, roiImg.rows/2));
 
+			// detect object base
+			boxDetector.predict(roiImg, roiMsk, 0.1f, 100);
+			cv::resize(roiMsk, roiMsk, cv::Size(roiMsk.cols*2, roiMsk.rows*2));
+			cv::Rect boxRoi = mat.getBoxBoundingRectColor();
+			cv::Rect boxRoiInRoi = cv::Rect(boxRoi.x - mat.imageROI.x, boxRoi.y - mat.imageROI.y, \
+				boxRoi.width, boxRoi.height);
+			roiMsk(boxRoiInRoi).copyTo(boxMsk);
+			boxTracker.track(boxMsk, boxRoi, kinect);
+
+			// find matches
+			getBoxBases(boxTracker, mat);
+
+			// draw object bases
+			for(int i = 0; i < (int)boxTracker.objects.size(); i++){
+				cv::circle(rawImg, boxTracker.objects[i].centroid, 5, cv::Scalar(0, 255, 0), -1);
+			}
+
+			// draw matched bases
+			for(int i = 0; i < 6; i++){
+				cv::circle(rawImg, mat.boxBases[i], 6, cv::Scalar(0, 0, 255), 2);
+			}
+
 			// draw roi rectangle
-			cv::rectangle(rawImg, imageROI, cv::Scalar(0, 0, 255));
+			cv::rectangle(rawImg, mat.imageROI, cv::Scalar(0, 0, 255));
 
 			// draw regions
 			for(int i = 0; i < mat.regions.size(); i++){
@@ -223,12 +292,20 @@ int _tmain(int argc, _TCHAR* argv[])
 				cv::line(rawImg, p4, p1, cv::Scalar(0, 255, 0));
 			}
 
+			// draw box bounding box
+			cv::rectangle(rawImg, boxRoi, cv::Scalar(0, 0, 255));
+
 			// draw instruction rect
 			cv::rectangle(rawImg, instructionRect, cv::Scalar(0, 0, 255));
 			cv::circle(rawImg, cv::Point(cx[selectStep], cy[selectStep]), 5, cv::Scalar(0, 255, 0));
-			
-			cv::imshow("raw", rawImg);
+
+			//cv::putText(rawImg, "press m to select mat points", cv::Point(rawImg.cols - 400, 100), CV_FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0,255,0), 1);
+			//cv::putText(rawImg, "press b to select box points", cv::Point(rawImg.cols - 400, 120), CV_FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0,255,0), 1);
+
 			cv::imshow("roi", roiImg);
+			cv::imshow("raw", rawImg);
+			cv::imshow("roiMsk", roiMsk);
+			cv::imshow("boxMsk", boxMsk);
 		}
 
 		int key = cv::waitKey(30) & 0xFF;
@@ -243,10 +320,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		case 's':
 			std::cout << "saving mat configurations..." << std::endl;
 			mat.save("matt.xml");
-			std::cout << "saving roi..." << std::endl;
-			fs.open("roi.xml", cv::FileStorage::WRITE);
-			fs << "roi" << imageROI;
-			fs.release();
 			break;
 		case 'p':
 			selectStep--;

@@ -56,23 +56,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	std::vector<std::thread> thrs;
 	for(int i = 0; i < numObjs; i++){
 		ObjTracker *tr = new ObjTracker();
-		tr->numObjs = 1;
+		tr->numObjs = 2;
 		trackers.push_back(tr);
 		mskImgs.push_back(cv::Mat());
 		thrs.push_back(std::thread());
 	}
-
-	// load ROI
-	int imgWidth = 384;
-	int imgHeight = 216;
-	cv::Rect imageROI;
-	cv::FileStorage fs;
-	fs.open("roi.xml", cv::FileStorage::READ);
-	fs["roi"] >> imageROI;
-	fs.release();
-	if(imageROI.width == 0){
-		imageROI = cv::Rect(0, 0, imgWidth, imgHeight);
-	}
+	trackers[1]->setMode(1);
 
 	// load mat configuration
 	Matt mat;
@@ -96,7 +85,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	colors.push_back(cv::Scalar(0,255,255));
 
 	TrajDrawer<cv::Point3f> velDrawer(100, 3);
-	TrajDrawer<cv::Point3f> speedDrawer(100, 1);
+	TrajDrawer<cv::Point3f> speedDrawer(100, 3);
 
 	bool running = true;
 
@@ -115,10 +104,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		// color image
 		if(kinect.getIsColorFrameNew()){
 			rawImg = cv::Mat(kinect.imageHeight, kinect.imageWidth, CV_8UC4, kinect.getImageData());
-			roiImg = rawImg(imageROI);
+			roiImg = rawImg(mat.imageROI);
 
 			cv::resize(roiImg, roiImg, cv::Size(roiImg.cols/2, roiImg.rows/2));
-			cv::rectangle(rawImg, imageROI, cv::Scalar(0, 0, 255));
+			cv::rectangle(rawImg, mat.imageROI, cv::Scalar(0, 0, 255));
 			
 			g_count = numObjs;
 			int64 start = cv::getTickCount();
@@ -135,11 +124,13 @@ int _tmain(int argc, _TCHAR* argv[])
 			for(int i = 0; i < numObjs; i++){
 				thrs[i].join();
 			}
-			
+
 			// track objects
 			for(int i = 0; i < numObjs; i++){
-				trackers[i]->track(mskImgs[i], imageROI, kinect, cv::Size(100, 80));
+				trackers[i]->track(mskImgs[i], mat.imageROI, kinect, mat, cv::Size(120, 120));
 			}
+
+			double seconds = (cv::getTickCount() - start)/cv::getTickFrequency();
 
 			// draw tracking results
 			for(int i = 0; i < numObjs; i++){
@@ -154,12 +145,15 @@ int _tmain(int argc, _TCHAR* argv[])
 
 					if(i == 0 && j == 0){
 						velDrawer.add(obj.velocity);
-						speedDrawer.add(cv::Point3f(sqrt(obj.velocity.x * obj.velocity.x + obj.velocity.y * obj.velocity.y + obj.velocity.z * obj.velocity.z), 0, 0));
+						float speed = sqrt(obj.velocity.x * obj.velocity.x + obj.velocity.y * obj.velocity.y + obj.velocity.z * obj.velocity.z);
+						float speeFileterd = sqrt(obj.velocityFiltered.x * obj.velocityFiltered.x + obj.velocityFiltered.y * obj.velocityFiltered.y + obj.velocityFiltered.z * obj.velocityFiltered.z);
+						float acc = sqrt(obj.acc.x * obj.acc.x + obj.acc.y * obj.acc.y + obj.acc.z * obj.acc.z);
+						float speed2D = sqrt(obj.velocity2D.x * obj.velocity2D.x + obj.velocity2D.y * obj.velocity2D.y);
+						speedDrawer.add(cv::Point3f(speed, obj.velocity2D.x, obj.velocity2D.y));
 					}
 
 				}
 			}
-			double seconds = (cv::getTickCount() - start)/cv::getTickFrequency();
 	
 			ss.str("");
 			ss << "test time: " << seconds * 1000 << " ms\n";
@@ -228,8 +222,11 @@ int _tmain(int argc, _TCHAR* argv[])
 				cv::line(rawImg, p4, p1, color);
 			}
 
+			// draw box rect
+			cv::rectangle(rawImg, mat.getBoxBoundingRectColor(), cv::Scalar(0, 255, 255));
+
 			velDrawer.show("velocity", 0.2f);
-			speedDrawer.show("speed", 0.4f);
+			speedDrawer.show("speed", 0.1f);
 
 			cv::resize(rawImg, rawImg, cv::Size(kinect.imageWidth/2, kinect.imageHeight/2));
 			cv::imshow("raw", rawImg);

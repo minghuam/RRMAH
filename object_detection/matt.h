@@ -22,8 +22,15 @@ public:
 	Matt();
 	// regions in mat space
 	std::vector<cv::Rect_<float> > regions;
+	// box region in mat space
+	cv::Rect_<float> boxRect;
 	// corners in color space
 	std::vector<cv::Point> corners;
+	// object bases
+	std::vector<cv::Point> boxBases;
+
+	// image roi
+	cv::Rect imageROI;
 	cv::Mat cam2Matt;
 	cv::Mat matt2Color;
 	cv::Mat color2Matt;
@@ -40,6 +47,11 @@ public:
 	// return distance in mat space
 	float distanceFromRegion(cv::Point3f camPt, int region);
 	float distanceFromRegion(cv::Point colorPt, int region);
+
+	// get box rect bounding box in color space
+	cv::Rect getBoxBoundingRectColor();
+
+
 };
 
 #endif

@@ -6,9 +6,11 @@
 #include "kinect2.h"
 #include <time.h>
 #include <iostream>
+#include "matt.h"
 
 class Object{
 public:
+	// contour size
 	float area;
 	// 2D position in color space(in pixles)
 	cv::Point centroid;
@@ -16,9 +18,15 @@ public:
 	cv::Point3f position;
 	// 3D velocity in camera space(in mm/sec)
 	cv::Point3f velocity;
+	// filtered 3D velocity in camera space(in mm/sec)
+	cv::Point3f velocityFiltered;
+	// 3D acceleration in camera space(in mm/sec^2)
+	cv::Point3f acc;
+	// 2D velocity in mat space
+	cv::Point2f velocity2D;
 	// 3D displacement since last frame(in mm)
 	cv::Point3f displacement;
-	// absolut timestamp(in sec)
+	// absolute timestamp(in sec)
 	float timestamp;
 	// object bounding rectangle
 	cv::Rect bbox;
@@ -36,7 +44,12 @@ public:
 		this->bbox = bbox;
 		this->id = id;
 		this->velocity = cv::Point3f(.0f, .0f, .0f);
+		this->velocity2D = cv::Point2f(.0f, .0f);
+		this->velocityFiltered = cv::Point3f(.0f, .0f, .0f);
+		this->displacement = cv::Point3f(.0f, .0f, .0f);
+		this->acc = cv::Point3f(.0f, .0f, .0f);
 		this->timestamp = ((float)clock())/CLOCKS_PER_SEC;
+
 	}
 
 	static float distance2d(const Object &obj1, const Object &obj2){
@@ -58,6 +71,7 @@ public:
 class ObjTracker{
 private:
 	unsigned int nextObjId;
+	int mode;
 
 public:
 	// minimum probability threshold for blobs(0 - 1.0f)
@@ -66,17 +80,20 @@ public:
 	float minArea;
 	// maximum displacement in camera space(mm)
 	float maxDisplacement;
-
+	// num of objects to track
 	int numObjs;
-
-	// simple low-pass filter
-	float alpha;
-
+	// simple low-pass filter param
+	float positionFilterAlpha;
+	float velocityFilterAlpha;
+	// tracking results
 	std::vector<Object> objects;
 
 	ObjTracker();
 	ObjTracker(float minProb, float minArea, int numObjs);
-	void track(cv::Mat &Imsk, cv::Rect roi, Kinect2 &kinect, cv::Size maxSize = cv::Size(0,0));
+	// mode 0(default): moments centroid, mode 1: bottom pixel
+	void setMode(int mode);
+	// track objects in detection mask
+	void track(cv::Mat &Imsk, cv::Rect roi, Kinect2 &kinect, Matt &mat, cv::Size maxSize = cv::Size(0,0));
 
 };
 

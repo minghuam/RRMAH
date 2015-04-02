@@ -8,6 +8,7 @@
 #include <vector>
 #include "dir_helper.h"
 
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	if(argc < 2){

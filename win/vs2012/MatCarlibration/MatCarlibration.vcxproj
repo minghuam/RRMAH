@@ -85,12 +85,20 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\kinect2\kinect2.h" />
     <ClInclude Include="..\..\..\object_detection\matt.h" />
+    <ClInclude Include="..\..\..\object_detection\obj_color_feature.h" />
+    <ClInclude Include="..\..\..\object_detection\obj_detector.h" />
+    <ClInclude Include="..\..\..\object_detection\obj_global_feature.h" />
+    <ClInclude Include="..\..\..\object_detection\obj_tracker.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\kinect2\kinect2.cpp" />
     <ClCompile Include="..\..\..\object_detection\matt.cpp" />
+    <ClCompile Include="..\..\..\object_detection\obj_color_feature.cpp" />
+    <ClCompile Include="..\..\..\object_detection\obj_detector.cpp" />
+    <ClCompile Include="..\..\..\object_detection\obj_global_feature.cpp" />
+    <ClCompile Include="..\..\..\object_detection\obj_tracker.cpp" />
     <ClCompile Include="MatCarlibration.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

@@ -57,15 +57,23 @@ ObjTracker::ObjTracker(){
 	minArea = 200;
 	numObjs = 1;
 	nextObjId = 0;
-	alpha = 0.3f;
-	maxDisplacement = 200.0f;	
+	positionFilterAlpha = 0.8f;
+	velocityFilterAlpha = 0.3;
+	maxDisplacement = 200.0f;
+	mode = 0;
 }
 
 ObjTracker::ObjTracker(float minProb, float minArea, int numObjs):
 	minProb(minProb), minArea(minArea), numObjs(numObjs), nextObjId(0)
-{}
+{
+	mode = 0;
+}
 
-void ObjTracker::track(cv::Mat &Imsk, cv::Rect roi, Kinect2 &kinect, cv::Size maxSize){
+void ObjTracker::setMode(int mode){
+	this->mode = mode;
+}
+
+void ObjTracker::track(cv::Mat &Imsk, cv::Rect roi, Kinect2 &kinect, Matt &mat, cv::Size maxSize){
 	std::vector<Object> newObjs;
 
 	// probability threshold
@@ -151,9 +159,24 @@ void ObjTracker::track(cv::Mat &Imsk, cv::Rect roi, Kinect2 &kinect, cv::Size ma
 		float deltaY = roi.y;
 
 		// calculate centroid and bbox
-		cv::Moments mom = cv::moments(contours[i], false);
-		int cx = (int)(mom.m10/mom.m00);
-		int cy = (int)(mom.m01/mom.m00);
+		float cx, cy;
+		if(mode == 0){
+			// moments centroid
+			cv::Moments mom = cv::moments(contours[i], false);
+			cx = (int)(mom.m10/mom.m00);
+			cy = (int)(mom.m01/mom.m00);
+		}else{
+			// get bottom pixel
+			cx = contours[i][0].x;
+			cy = contours[i][0].y;
+			for(int j = 0; j < contours[i].size(); j++){
+				if(cy < contours[i][j].y){
+					cx = contours[i][j].x;
+					cy = contours[i][j].y;
+				}
+			}
+		}
+
 		float colorX = cx * scaleX + deltaX;
 		float colorY = cy * scaleY + deltaY;
 		cv::Point centroid(colorX, colorY);
@@ -210,18 +233,28 @@ void ObjTracker::track(cv::Mat &Imsk, cv::Rect roi, Kinect2 &kinect, cv::Size ma
 				}
 
 				// simple low-pass filter
-				p.newObj->position.x = p.newObj->position.x * alpha + (1.0f - alpha) * p.oldObj->position.x;
-				p.newObj->position.y = p.newObj->position.y * alpha + (1.0f - alpha) * p.oldObj->position.y;
-				p.newObj->position.z = p.newObj->position.z * alpha + (1.0f - alpha) * p.oldObj->position.z;
-
+				p.newObj->position = p.newObj->position * positionFilterAlpha + (1.0f - positionFilterAlpha) * p.oldObj->position;
+				
 				p.newObj->id = p.oldObj->id;
 				p.oldObj->id = -1;
-				p.newObj->displacement = deltaPos;
+				//p.newObj->displacement = deltaPos;
+				p.newObj->displacement = 1000.0f * (p.newObj->position - p.oldObj->position);
 				float time = p.newObj->timestamp - p.oldObj->timestamp;
 				if(time > 0.0f){
 					p.newObj->velocity.x = p.newObj->displacement.x/time;
 					p.newObj->velocity.y = p.newObj->displacement.y/time;
 					p.newObj->velocity.z = p.newObj->displacement.z/time;
+
+					//p.newObj->velocityFiltered = p.newObj->velocity * velocityFilterAlpha + (1.0f - velocityFilterAlpha) * p.oldObj->velocityFiltered;
+					p.newObj->velocityFiltered = p.newObj->velocity;
+
+					p.newObj->acc.x = p.newObj->velocityFiltered.x/time;
+					p.newObj->acc.y = p.newObj->velocityFiltered.y/time;
+					p.newObj->acc.z = p.newObj->velocityFiltered.z/time;
+
+					cv::Point2f delta = mat.colorToMatt(p.newObj->centroid) - mat.colorToMatt(p.oldObj->centroid);
+					p.newObj->velocity2D.x = 1000.0f * delta.x/time;
+					p.newObj->velocity2D.y = 1000.0f * delta.y/time;
 				}
 			}
 		}

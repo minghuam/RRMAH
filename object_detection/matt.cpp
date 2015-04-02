@@ -4,16 +4,19 @@
 Matt::Matt(){
 	corners = std::vector<cv::Point>(NUM_CTRL_PTS, cv::Point());
 	regions = std::vector<cv::Rect_<float> >(NUM_REGIONS, cv::Rect_<float>());
+	boxBases = std::vector<cv::Point>(6);
 }
 
 int Matt::load(std::string config){
 	cv::FileStorage fs;
 	if(fs.open(config, cv::FileStorage::READ)){
+		fs["roi"] >> imageROI;
 		fs["startRect"] >> regions[0];
 		fs["leftRect"] >> regions[1];
 		fs["rightRect"] >> regions[2];
 		fs["bodyMiddleRect"] >> regions[3];
 		fs["ipsilateralRect"] >> regions[4];
+		fs["boxRect"] >> boxRect;
 		fs["corner1"] >> corners[0];
 		fs["corner2"] >> corners[1];
 		fs["corner3"] >> corners[2];
@@ -22,6 +25,12 @@ int Matt::load(std::string config){
 		fs["corner6"] >> corners[5];
 		fs["corner7"] >> corners[6];
 		fs["corner8"] >> corners[7];
+		fs["base1"] >> boxBases[0];
+		fs["base2"] >> boxBases[1];
+		fs["base3"] >> boxBases[2];
+		fs["base4"] >> boxBases[3];
+		fs["base5"] >> boxBases[4];
+		fs["base6"] >> boxBases[5];
 		fs["cam2Matt"] >> cam2Matt;
 		fs["matt2Color"] >> matt2Color;
 		fs["color2Matt"] >> color2Matt;
@@ -54,11 +63,13 @@ int Matt::load(std::string config){
 void Matt::save(std::string config){
 	cv::FileStorage fs;
 	if(fs.open(config, cv::FileStorage::WRITE)){
+		fs << "roi" << imageROI;
 		fs << "startRect" << regions[0];
 		fs << "leftRect" << regions[1];
 		fs << "rightRect" << regions[2];
 		fs << "bodyMiddleRect" << regions[3];
 		fs << "ipsilateralRect" << regions[4];
+		fs << "boxRect" << boxRect;
 		fs << "corner1" << corners[0];
 		fs << "corner2" << corners[1];
 		fs << "corner3" << corners[2];
@@ -67,6 +78,12 @@ void Matt::save(std::string config){
 		fs << "corner6" << corners[5];
 		fs << "corner7" << corners[6];
 		fs << "corner8" << corners[7];
+		fs << "base1" << boxBases[0];
+		fs << "base2" << boxBases[1];
+		fs << "base3" << boxBases[2];
+		fs << "base4" << boxBases[3];
+		fs << "base5" << boxBases[4];
+		fs << "base6" << boxBases[5];
 		fs << "cam2Matt" << cam2Matt;
 		fs << "matt2Color" << matt2Color;
 		fs << "color2Matt" << color2Matt;
@@ -141,4 +158,23 @@ float Matt::distanceFromRegion(cv::Point colorPt, int region){
 	cv::Rect_<float> rect = regions[region];
 	cv::Point2f center = cv::Point2f(rect.x + rect.width/2.0f, rect.y + rect.height/2.0f);
 	return sqrt((center.x - matPt.x)*(center.x - matPt.x) + (center.y - matPt.y)*(center.y - matPt.y));
+}
+
+cv::Rect Matt::getBoxBoundingRectColor(){
+	cv::Point2f p1 = mattToColor(cv::Point2f(boxRect.x, boxRect.y));
+	cv::Point2f p2 = mattToColor(cv::Point2f(boxRect.x + boxRect.width, boxRect.y));
+	cv::Point2f p3 = mattToColor(cv::Point2f(boxRect.x + boxRect.width, boxRect.y + boxRect.height));
+	cv::Point2f p4 = mattToColor(cv::Point2f(boxRect.x, boxRect.y + boxRect.height));
+	int left = (int)std::min(p1.x, p4.x);
+	int top = (int)std::min(p1.y, p2.y);
+	int right = (int)std::max(p2.x, p3.x);
+	int bottom = (int)std::max(p3.y, p4.y);
+	cv::Rect rect = cv::Rect(left, top, right - left, bottom - top);
+
+	// enlarge rect to align with image roi in x
+	if(rect.y != imageROI.y){
+		rect = cv::Rect(rect.x, imageROI.y, rect.width, rect.y + rect.height - imageROI.y);
+	}
+
+	return rect;
 }

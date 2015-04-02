@@ -17,6 +17,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Aruco", "Aruco\Aruco.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestCommunication", "TestCommunication\TestCommunication.vcxproj", "{D8FDA6BA-F23D-4B68-974E-7E26049CB96B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestBoxDetector", "TestBoxDetector\TestBoxDetector.vcxproj", "{E25A7011-E994-4F41-B124-59BF3A2479E6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -89,6 +91,14 @@ Global
 		{D8FDA6BA-F23D-4B68-974E-7E26049CB96B}.Release|Win32.Build.0 = Release|Win32
 		{D8FDA6BA-F23D-4B68-974E-7E26049CB96B}.ReleaseBin|Win32.ActiveCfg = Release|Win32
 		{D8FDA6BA-F23D-4B68-974E-7E26049CB96B}.ReleaseBin|Win32.Build.0 = Release|Win32
+		{E25A7011-E994-4F41-B124-59BF3A2479E6}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E25A7011-E994-4F41-B124-59BF3A2479E6}.Debug|Win32.Build.0 = Debug|Win32
+		{E25A7011-E994-4F41-B124-59BF3A2479E6}.DebugBin|Win32.ActiveCfg = Debug|Win32
+		{E25A7011-E994-4F41-B124-59BF3A2479E6}.DebugBin|Win32.Build.0 = Debug|Win32
+		{E25A7011-E994-4F41-B124-59BF3A2479E6}.Release|Win32.ActiveCfg = Release|Win32
+		{E25A7011-E994-4F41-B124-59BF3A2479E6}.Release|Win32.Build.0 = Release|Win32
+		{E25A7011-E994-4F41-B124-59BF3A2479E6}.ReleaseBin|Win32.ActiveCfg = Release|Win32
+		{E25A7011-E994-4F41-B124-59BF3A2479E6}.ReleaseBin|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
